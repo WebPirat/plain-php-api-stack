@@ -1,22 +1,20 @@
 <?php
 require_once '/classes/Router.php';
-
-// Callback function for authenticated route
-function hello() {
-    echo 'Hello, authenticated user!';
-}
-
-// Callback function for unauthenticated route
-function world() {
-    echo 'Hello, world!';
-}
-
 // Instantiate the Router class
 $router = new Router();
 
-// Add routes
-$router->add('/', 'world');
-$router->add('/hello', 'hello', 'GET', true);
+// automatisches Laden aller Routen
+foreach (glob(__DIR__ . '/routes/*.php') as $filename) {
+    $routeName = basename($filename, '.php');
+    $routePath = '/' . $routeName;
+    include $filename;
+    $router->group($routePath, function () use ($routeName) {
+        $this->get('', "{$routeName}@index");
+        $this->post('', "{$routeName}@store");
+        $this->get('/{id:\d+}', "{$routeName}@show");
+        $this->put('/{id:\d+}', "{$routeName}@update");
+        $this->delete('/{id:\d+}', "{$routeName}@destroy");
+    });
+}
 
-// Run the router
 $router->run();
