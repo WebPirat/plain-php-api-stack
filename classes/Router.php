@@ -36,7 +36,12 @@ class Router
 
     public function middleware($middleware)
     {
-        $this->groupMiddleware[] = $middleware;
+        $this->groupMiddleware[] = function($handler) use ($middleware) {
+            return function() use ($handler, $middleware) {
+                $middleware->handle();
+                call_user_func_array($handler, func_get_args());
+            };
+        };
     }
 
     public function verifyToken()

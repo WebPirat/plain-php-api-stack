@@ -1,19 +1,34 @@
 <?php
 
-interface MiddlewareInterface {
-    public function handle(Request $request, Closure $next);
-}
+class VerifyTokenMiddleware {
+    public function handle($request, $next) {
+        try {
+            $authorizationHeader = $_SERVER['HTTP_AUTHORIZATION'] ?? '';
+            $matches = [];
+            if (preg_match('/^Bearer\s+(.*?)$/', $authorizationHeader, $matches)) {
+                $token = $matches[1];
+                // Decode the JWT token using the "decode" method of the "JWT" class
+                $payload = JWT::decode($token);
 
-class VerifyTokenMiddleware implements MiddlewareInterface {
-    public function handle(Request $request, Closure $next) {
-        // Prüfen, ob der Token gültig ist
-        $token = $request->get('token');
-        if ($token !== 'secret') {
-            // Wenn der Token ungültig ist, eine Fehlermeldung zurückgeben
-            return response('Unauthorized', 401);
+                // Verify the payload contains the necessary information
+                if (!isset($payload->iss) || $payload->iss !== 'my-app' || !isset($payload->exp)) {
+                    throw new Exception('Invalid token');
+                }
+
+                // Verify the token expiration time
+                $now = time();
+                if ($payload->exp <= $now) {
+                    throw new Exception('Token has expired');
+                }
+            }else{
+                throw new Exception('Token not found');
+            }
+        } catch (Exception $e) {
+            header('HTTP/1.0 401 Unauthorized');
+            exit($e->getMessage());
         }
 
-        // Wenn der Token gültig ist, die nächste Middleware oder den Handler aufrufen
+        // call the next middleware or the route handler
         return $next($request);
     }
 }
