@@ -1,82 +1,59 @@
 <?php
+include_once __DIR__ . '/../classes/Database.php';
 
-
-//user modal based on the db class
-class User
+//user modal based on the database class
+class User extends Database
 {
     public $id;
     public $name;
     public $email;
     public $password;
-    public $created_at;
-    public $updated_at;
-    public function __construct()
-    {
-        $this->db = new Database();
-    }
+
     public function all()
     {
-        $results = $this->db->select('users', '*');
-        $users = [];
-        foreach ($results as $result) {
-            $user = new User();
-            $user->id = $result['id'];
-            $user->name = $result['name'];
-            $user->email = $result['email'];
-            $user->password = $result['password'];
-            $user->created_at = $result['created_at'];
-            $user->updated_at = $result['updated_at'];
-            $users[] = $user;
-        }
+        $users = $this->select('users');
         return $users;
     }
+
     public function find($id)
     {
-        $result = $this->db->select('users', '*', "id = $id");
-        if ($result) {
-            $user = new User();
-            $user->id = $result[0]['id'];
-            $user->name = $result[0]['name'];
-            $user->email = $result[0]['email'];
-            $user->password = $result[0]['password'];
-            $user->created_at = $result[0]['created_at'];
-            $user->updated_at = $result[0]['updated_at'];
-            return $user;
-        } else {
-            return false;
-        }
+        $user = $this->select('users', array('id' => $id));
+        return $user[0];
     }
+
     public function save()
     {
         $data = array(
             'name' => $this->name,
             'email' => $this->email,
-            'password' => $this->password
+            'password' => password_hash($this->password, PASSWORD_DEFAULT),
         );
+
         if ($this->id) {
-            $this->db->update('users', $data, "id = $this->id");
+            $this->update('users', $data, array('id' => $this->id));
         } else {
-            $this->db->insert('users', $data);
-            $this->id = $this->db->lastInsertId();
+            $this->insert('users', $data);
+            $this->id = $this->connection->insert_id;
         }
     }
-    public function delete()
+
+    public function delete($table, $id)
     {
-        $this->db->delete('users', "id = $this->id");
+        $this->delete('users', $id);
     }
 
-    // function to create the user table in database
-    public function createTable()
+    //function to create user table in mysql
+    public function createTableIfNotExist()
     {
-        $sql = "CREATE TABLE IF NOT EXISTS users (
-            id INT(11) NOT NULL AUTO_INCREMENT,
-            name VARCHAR(255) NOT NULL,
-            email VARCHAR(255) NOT NULL,
-            password VARCHAR(255) NOT NULL,
-            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-            PRIMARY KEY (id)
-        )";
-        $this->db->query($sql);
+        //$data von createTable in Database.php
+        $data = array(
+            'name' => 'VARCHAR(255) NOT NULL',
+            'email' => 'VARCHAR(255) NOT NULL',
+            'password' => 'VARCHAR(255) NOT NULL',
+        );
+        $this->createTable('users', $data);
     }
+
+
 }
+

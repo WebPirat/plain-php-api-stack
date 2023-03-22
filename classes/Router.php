@@ -84,4 +84,15 @@ class Router
             }
         }
     }
+
+    private function addRoute($string, $route, $handler)
+    {
+        $route = $this->groupPrefix . $route;
+        $this->routes[] = [
+            'method' => $string,
+            'route' => $route,
+            'handler' => $handler,
+            'middleware' => $this->groupMiddleware
+        ];
+    }
 }

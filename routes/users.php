@@ -1,5 +1,6 @@
 <?php
-//use the /classes to build a restapi for users
+require_once __DIR__ . '/../controller/UserController.php';
+echo 'hello';
 
 $router = new Router();
 $router->get('/users', 'UserController@index');

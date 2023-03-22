@@ -1,58 +1,52 @@
 <?php
-//user controller based on the router class
+// include user modal
+require_once __DIR__ . '/../modal/User.php';
+
+//user controller bassed on the user modal handle api request
 class UserController
 {
+    public function __construct()
+    {
+        $user = new User();
+        $user->createTableIfNotExist('users', array());
+    }
+
     public function index()
     {
-        $users = User::all();
-        header('Content-Type: application/json');
+        $user = new User();
+        $users = $user->all();
         echo json_encode($users);
-    }
-    public function show($id)
-    {
-        $user = User::find($id);
-        if ($user) {
-            header('Content-Type: application/json');
-            echo json_encode($user);
-        } else {
-            header('HTTP/1.1 404 Not Found');
-            echo 'User not found.';
-        }
     }
     public function store()
     {
-        $data = json_decode(file_get_contents('php://input'), true);
         $user = new User();
-        $user->name = $data['name'];
-        $user->email = $data['email'];
+        $user->name = $_POST['name'];
+        $user->email = $_POST['email'];
+        $user->password = $_POST['password'];
         $user->save();
-        header('HTTP/1.1 201 Created');
-        header('Content-Type: application/json');
-        echo json_encode(['id' => $user->id]);
+        echo json_encode($user);
+    }
+    public function show($id)
+    {
+        $user = new User();
+        $user = $user->find($id);
+        echo json_encode($user);
     }
     public function update($id)
     {
-        $data = json_decode(file_get_contents('php://input'), true);
-        $user = User::find($id);
-        if ($user) {
-            $user->name = $data['name'];
-            $user->email = $data['email'];
-            $user->save();
-            header('HTTP/1.1 204 No Content');
-        } else {
-            header('HTTP/1.1 404 Not Found');
-            echo 'User not found.';
-        }
+        $user = new User();
+        $user = $user->find($id);
+        $user->name = $_POST['name'];
+        $user->email = $_POST['email'];
+        $user->password = $_POST['password'];
+        $user->save();
+        echo json_encode($user);
     }
     public function destroy($id)
     {
-        $user = User::find($id);
-        if ($user) {
-            $user->delete();
-            header('HTTP/1.1 204 No Content');
-        } else {
-            header('HTTP/1.1 404 Not Found');
-            echo 'User not found.';
-        }
+        $user = new User();
+        $user = $user->find($id);
+        $user->delete();
+        echo json_encode($user);
     }
 }
