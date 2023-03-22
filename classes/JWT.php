@@ -1,48 +1,61 @@
 <?php
-
+// JTW token class in plain php
 class JWT
 {
-    private $secret;
-
-    public function __construct($secret)
+    /** Encode a payload into a JWT.
+     * @param $payload
+     * @param $key
+     * @param $algo
+     * @return string
+     */
+    public static function encode($payload, $key, $algo = 'HS256')
     {
-        $this->secret = $secret;
-    }
-
-    public function encode($payload)
-    {
-        $header = json_encode([
-            'typ' => 'JWT',
-            'alg' => 'HS256'
-        ]);
-
+        $header = ['typ' => 'JWT', 'alg' => $algo];
+        $header = json_encode($header);
+        $header = self::urlsafeB64Encode($header);
         $payload = json_encode($payload);
-
-        $base64UrlHeader = str_replace(['+', '/', '='], ['-', '_', ''], base64_encode($header));
-        $base64UrlPayload = str_replace(['+', '/', '='], ['-', '_', ''], base64_encode($payload));
-
-        $signature = hash_hmac('sha256', $base64UrlHeader . "." . $base64UrlPayload, $this->secret, true);
-        $base64UrlSignature = str_replace(['+', '/', '='], ['-', '_', ''], base64_encode($signature));
-
-        return $base64UrlHeader . "." . $base64UrlPayload . "." . $base64UrlSignature;
+        $payload = self::urlsafeB64Encode($payload);
+        $signature = hash_hmac('sha256', "$header.$payload", $key, true);
+        $signature = self::urlsafeB64Encode($signature);
+        return "$header.$payload.$signature";
     }
+    /** Decode a JWT into a PHP object.
+     * @param $jwt
+     * @param $key
+     * @param $algo
+     * @return mixed
+     * @throws Exception
+     */
 
-    public function decode($jwt)
+    public static function decode($jwt, $key, $algo = 'HS256')
     {
-        list($base64UrlHeader, $base64UrlPayload, $base64UrlSignature) = explode('.', $jwt);
-
-        $header = base64_decode(str_replace(['-', '_'], ['+', '/'], $base64UrlHeader));
-        $payload = base64_decode(str_replace(['-', '_'], ['+', '/'], $base64UrlPayload));
-        $signature = base64_decode(str_replace(['-', '_'], ['+', '/'], $base64UrlSignature));
-
-        $valid = hash_hmac('sha256', $base64UrlHeader . "." . $base64UrlPayload, $this->secret, true) === $signature;
-
-        if (!$valid) {
-            return null;
+        $tokens = explode('.', $jwt);
+        if (count($tokens) != 3) {
+            throw new Exception('Wrong number of segments');
         }
-
-        $payload = json_decode($payload, true);
-
+        list($header64, $payload64, $signature) = $tokens;
+        $header = json_decode(self::urlsafeB64Decode($header64));
+        $payload = json_decode(self::urlsafeB64Decode($payload64));
+        $signatureCheck = hash_hmac('sha256', "$header64.$payload64", $key, true);
+        $signatureCheck = self::urlsafeB64Encode($signatureCheck);
+        if ($signature != $signatureCheck) {
+            throw new Exception('Signature verification failed');
+        }
         return $payload;
+    }
+    private static function urlsafeB64Encode($string)
+    {
+        $data = base64_encode($string);
+        $data = str_replace(['+', '/', '='], ['-', '_', ''], $data);
+        return $data;
+    }
+    private static function urlsafeB64Decode($string)
+    {
+        $data = str_replace(['-', '_'], ['+', '/'], $string);
+        $mod4 = strlen($data) % 4;
+        if ($mod4) {
+            $data .= substr('====', $mod4);
+        }
+        return base64_decode($data);
     }
 }
