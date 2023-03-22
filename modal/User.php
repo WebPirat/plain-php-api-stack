@@ -14,7 +14,12 @@ class User extends Database
         $users = $this->select('users');
         return $users;
     }
-
+    //find user by email
+    public function find_by_email($email)
+    {
+        $user = $this->select('users', array('email' => $email));
+        return $user[0];
+    }
     public function find($id)
     {
         $user = $this->select('users', array('id' => $id));

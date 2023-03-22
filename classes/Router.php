@@ -7,24 +7,24 @@ class Router
     private $groupPrefix = '';
     private $groupMiddleware = [];
 
-    public function get($route, $handler)
+    public function get($route, $handler, $middleware = [])
     {
-        $this->addRoute('GET', $route, $handler);
+        $this->addRoute('GET', $route, $handler, $middleware);
     }
 
-    public function post($route, $handler)
+    public function post($route, $handler, $middleware = [])
     {
-        $this->addRoute('POST', $route, $handler);
+        $this->addRoute('POST', $route, $handler, $middleware);
     }
 
-    public function put($route, $handler)
+    public function put($route, $handler, $middleware = [])
     {
-        $this->addRoute('PUT', $route, $handler);
+        $this->addRoute('PUT', $route, $handler, $middleware);
     }
 
-    public function delete($route, $handler)
+    public function delete($route, $handler, $middleware = [])
     {
-        $this->addRoute('DELETE', $route, $handler);
+        $this->addRoute('DELETE', $route, $handler, $middleware);
     }
 
     public function group($prefix, $callback)
@@ -37,6 +37,35 @@ class Router
     public function middleware($middleware)
     {
         $this->groupMiddleware[] = $middleware;
+    }
+
+    public function verifyToken()
+    {
+        try {
+            $authorizationHeader = $_SERVER['HTTP_AUTHORIZATION'] ?? '';
+            $matches = [];
+            if (preg_match('/^Bearer\s+(.*?)$/', $authorizationHeader, $matches)) {
+                $token = $matches[1];
+                // Decode the JWT token using the "decode" method of the "JWT" class
+                $payload = JWT::decode($token);
+
+                // Verify the payload contains the necessary information
+                if (!isset($payload->iss) || $payload->iss !== 'my-app' || !isset($payload->exp)) {
+                    throw new Exception('Invalid token');
+                }
+
+                // Verify the token expiration time
+                $now = time();
+                if ($payload->exp <= $now) {
+                    throw new Exception('Token has expired');
+                }
+            }else{
+                throw new Exception('Token not found');
+            }
+        } catch (Exception $e) {
+            header('HTTP/1.0 401 Unauthorized');
+            exit($e->getMessage());
+        }
     }
 
     public function run()
@@ -74,6 +103,13 @@ class Router
             }
 
             $handler = $route['handler'];
+            $middlewares = $route['middlewares'];
+
+            foreach ($middlewares as $middleware) {
+                $handler = function ($request) use ($handler, $middleware) {
+                    return $middleware->handle($request, $handler);
+                };
+            }
 
             if (is_callable($handler)) {
                 call_user_func_array($handler, $params);
@@ -85,14 +121,14 @@ class Router
         }
     }
 
-    private function addRoute($string, $route, $handler)
+    private function addRoute($string, $route, $handler, $middlewares = [])
     {
         $route = $this->groupPrefix . $route;
         $this->routes[] = [
             'method' => $string,
             'route' => $route,
             'handler' => $handler,
-            'middleware' => $this->groupMiddleware
+            'middlewares' => $middlewares
         ];
     }
 }

@@ -1,11 +1,11 @@
 <?php
 require_once __DIR__ . '/../controller/UserController.php';
-echo 'hello';
+require_once __DIR__ . '/../middlewares/VerifyTokenMiddleware.php';
 
 $router = new Router();
-$router->get('/users', 'UserController@index');
-$router->post('/users', 'UserController@store');
-$router->get('/users/{id:\d+}', 'UserController@show');
-$router->put('/users/{id:\d+}', 'UserController@update');
-$router->delete('/users/{id:\d+}', 'UserController@destroy');
+$router->get('/users', 'UserController@index', [new VerifyTokenMiddleware]);
+$router->post('/users', 'UserController@store', [new VerifyTokenMiddleware]);
+$router->get('/users/{id:\d+}', 'UserController@show', [new VerifyTokenMiddleware]);
+$router->put('/users/{id:\d+}', 'UserController@update', [new VerifyTokenMiddleware]);
+$router->delete('/users/{id:\d+}', 'UserController@destroy', [new VerifyTokenMiddleware]);
 
